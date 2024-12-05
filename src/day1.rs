@@ -197,7 +197,7 @@ pub fn deserialize<'a, T: de::Deserialize<'a>>(input: &'a str) -> Result<T, MyEr
     Ok(t)
 }
 
-pub fn calculate() -> anyhow::Result<(i32, i32)> {
+pub fn calculate() -> anyhow::Result<(i32, u64)> {
     let mut input: Day1Input = deserialize(&fs::read_to_string("input/day1")?)?;
 
     input.left.sort();
@@ -208,5 +208,9 @@ pub fn calculate() -> anyhow::Result<(i32, i32)> {
         distance += if l > r { l - r } else { r - l };
     }
 
-    Ok((distance as i32, 1))
+    let mut similarity: u64 = 0;
+    for l in input.left.iter() {
+        similarity += (*l as u64) * input.right.iter().filter(|r| **r == *l).count() as u64;
+    }
+    Ok((distance as i32, similarity))
 }
