@@ -1,27 +1,29 @@
 use crate::error::MyError;
-use crate::parsing::{parse_newline, parse_space, parse_unsigned, peek_char};
+use crate::parsing::{next_char, parse_unsigned, peek_char};
 use serde::de::{self};
 use std::fmt::Formatter;
 use std::{fmt, fs};
 
-pub struct Day1Input {
-    left: Vec<u32>,
-    right: Vec<u32>,
+pub struct Report {
+    levels: Vec<u32>,
+}
+pub struct Day2Input {
+    reports: Vec<Report>,
 }
 
-impl<'de> de::Deserialize<'de> for Day1Input {
+impl<'de> de::Deserialize<'de> for Day2Input {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
-        deserializer.deserialize_str(Day1InputVisitor)
+        deserializer.deserialize_str(Day2InputVisitor)
     }
 }
 
-pub struct Day1InputVisitor;
+pub struct Day2InputVisitor;
 
-impl<'de> de::Visitor<'de> for Day1InputVisitor {
-    type Value = Day1Input;
+impl<'de> de::Visitor<'de> for Day2InputVisitor {
+    type Value = Day2Input;
 
     fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
         formatter.write_str(
@@ -34,25 +36,33 @@ impl<'de> de::Visitor<'de> for Day1InputVisitor {
         E: de::Error,
     {
         let mut input: &str = input;
-        let mut left = Vec::<u32>::new();
-        let mut right = Vec::<u32>::new();
+        let mut reports = Vec::<Report>::new();
 
         while let Ok(c) = peek_char(input) {
             if c.is_ascii_digit() {
+                let mut levels = Vec::<u32>::new();
                 let (num, new_input) = parse_unsigned(input).map_err(|e| de::Error::custom(e))?;
-                left.push(num);
-                let new_input = parse_space(new_input).map_err(|e| de::Error::custom(e))?;
-                let (num, new_input) =
-                    parse_unsigned(new_input).map_err(|e| de::Error::custom(e))?;
-                right.push(num);
-                let new_input = parse_newline(new_input).map_err(|e| de::Error::custom(e))?;
+                levels.push(num);
                 input = new_input;
+                loop {
+                    let (c, new_input) = next_char(input).map_err(|e| de::Error::custom(e))?;
+                    input = new_input;
+                    if c == ' ' {
+                        let (num, new_input) =
+                            parse_unsigned(input).map_err(|e| de::Error::custom(e))?;
+                        input = new_input;
+                        levels.push(num);
+                    } else {
+                        break;
+                    }
+                }
+                reports.push(Report { levels });
             } else {
                 break;
             }
         }
 
-        Ok(Day1Input { left, right })
+        Ok(Day2Input { reports })
     }
 }
 
@@ -100,19 +110,20 @@ pub fn deserialize<'a, T: de::Deserialize<'a>>(input: &'a str) -> Result<T, MyEr
 }
 
 pub fn calculate() -> anyhow::Result<(i32, u64)> {
-    let mut input: Day1Input = deserialize(&fs::read_to_string("input/day1")?)?;
+    let input: Day2Input = deserialize(&fs::read_to_string("input/day2")?)?;
 
-    input.left.sort();
-    input.right.sort();
-
-    let mut distance = 0;
-    for (l, r) in input.left.iter().zip(input.right.iter()) {
-        distance += if l > r { l - r } else { r - l };
+    let mut safe_reports = 0;
+    for report in input.reports {
+        let positive = report.levels[0] < report.levels[1];
+        if report.levels.windows(2).all(|w| {
+            if positive {
+                (1..4).contains(&w[1].saturating_sub(w[0]))
+            } else {
+                (1..4).contains(&w[0].saturating_sub(w[1]))
+            }
+        }) {
+            safe_reports += 1;
+        }
     }
-
-    let mut similarity: u64 = 0;
-    for l in input.left.iter() {
-        similarity += (*l as u64) * input.right.iter().filter(|r| **r == *l).count() as u64;
-    }
-    Ok((distance as i32, similarity))
+    Ok((safe_reports, 1))
 }

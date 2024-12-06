@@ -2,6 +2,9 @@ use anyhow::anyhow;
 use clap::Parser;
 
 mod day1;
+mod day2;
+mod error;
+mod parsing;
 
 #[derive(Parser)]
 #[clap(
@@ -18,6 +21,7 @@ fn main() {
 
     let res = match args.day {
         1 => day1::calculate(),
+        2 => day2::calculate(),
         _ => Err(anyhow!("illegal day")),
     };
 
