@@ -2,7 +2,7 @@ use crate::error::MyError;
 use crate::parsing::{next_char, parse_unsigned, peek_char};
 use serde::de::{self};
 use std::fmt::Formatter;
-use std::{fmt, fs};
+use std::fmt;
 
 pub struct Report {
     levels: Vec<u32>,
@@ -109,21 +109,96 @@ pub fn deserialize<'a, T: de::Deserialize<'a>>(input: &'a str) -> Result<T, MyEr
     Ok(t)
 }
 
-pub fn calculate() -> anyhow::Result<(i32, u64)> {
-    let input: Day2Input = deserialize(&fs::read_to_string("input/day2")?)?;
+fn level_safety(level: &[u32]) -> bool {
+    if level.is_empty() || level.len() == 1 {
+        return true;
+    }
+    let positive = level[0] < level[1];
+    level.windows(2).all(|w| {
+        if positive {
+            (1..4).contains(&w[1].saturating_sub(w[0]))
+        } else {
+            (1..4).contains(&w[0].saturating_sub(w[1]))
+        }
+    })
+}
+
+pub fn calculate(input: &str) -> anyhow::Result<(i32, u64)> {
+    let input: Day2Input = deserialize(input)?;
 
     let mut safe_reports = 0;
-    for report in input.reports {
-        let positive = report.levels[0] < report.levels[1];
-        if report.levels.windows(2).all(|w| {
-            if positive {
-                (1..4).contains(&w[1].saturating_sub(w[0]))
-            } else {
-                (1..4).contains(&w[0].saturating_sub(w[1]))
-            }
-        }) {
+    for report in &input.reports {
+        if level_safety(&report.levels) {
             safe_reports += 1;
         }
     }
-    Ok((safe_reports, 1))
+    let mut safe_reports_p2 = 0;
+    for report in &input.reports {
+        let mut passed = false;
+        for i in 0..report.levels.len() {
+            let mut levels_copy = report.levels.clone();
+            levels_copy.remove(i);
+            if level_safety(&levels_copy) {
+                passed = true;
+            }
+        }
+        if passed {
+            safe_reports_p2 += 1;
+        }
+    }
+    Ok((safe_reports, safe_reports_p2))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn example_input_data() {
+        let input = "7 6 4 2 1
+1 2 7 8 9
+9 7 6 2 1
+1 3 2 4 5
+8 6 4 4 1
+1 3 6 7 9
+";
+        assert_eq!(calculate(input).unwrap(), (2, 4));
+    }
+
+    #[test]
+    fn invalid_short_inc() {
+        let input = "1 7\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
+
+    #[test]
+    fn invalid_short_dec() {
+        let input = "7 1\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
+
+    #[test]
+    fn invalid_short_flip() {
+        let input = "7 1 2\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
+
+    #[test]
+    fn invalid_short_flip_large_drop() {
+        let input = "7 1 8\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
+
+
+    #[test]
+    fn invalid_last_inc() {
+        let input = "1 2 3 9\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
+
+    #[test]
+    fn invalid_first_inc() {
+        let input = "1 7 8 9\n";
+        assert_eq!(calculate(input).unwrap(), (0, 1));
+    }
 }

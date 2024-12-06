@@ -2,7 +2,7 @@ use crate::error::MyError;
 use crate::parsing::{parse_newline, parse_space, parse_unsigned, peek_char};
 use serde::de::{self};
 use std::fmt::Formatter;
-use std::{fmt, fs};
+use std::fmt;
 
 pub struct Day1Input {
     left: Vec<u32>,
@@ -99,8 +99,8 @@ pub fn deserialize<'a, T: de::Deserialize<'a>>(input: &'a str) -> Result<T, MyEr
     Ok(t)
 }
 
-pub fn calculate() -> anyhow::Result<(i32, u64)> {
-    let mut input: Day1Input = deserialize(&fs::read_to_string("input/day1")?)?;
+pub fn calculate(input: &str) -> anyhow::Result<(i32, u64)> {
+    let mut input: Day1Input = deserialize(input)?;
 
     input.left.sort();
     input.right.sort();
