@@ -1,11 +1,12 @@
 use crate::error::MyError;
-use crate::parsing::{parse_newline, parse_space, parse_token, parse_unsigned, peek_char};
+use crate::parsing::{parse_token, parse_unsigned, peek_char};
 use serde::de::{self};
 use std::fmt::Formatter;
 use std::fmt;
 
 pub struct Day3Input {
     multipliers: Vec<(u32, u32)>,
+    selected: Vec<(u32, u32)>,
 }
 
 impl<'de> de::Deserialize<'de> for Day3Input {
@@ -34,21 +35,34 @@ impl<'de> de::Visitor<'de> for Day3InputVisitor {
     {
         let mut input: &str = input;
         let mut multipliers = Vec::<(u32, u32)>::new();
+        let mut selected = Vec::<(u32, u32)>::new();
         let mut found = false;
+        let mut enabled = true;
 
-        while let Ok(c) = peek_char(input) {
-            if c == 'm' {
-                let (hit, new_input) = parse_token(input, "mul(");
-                if hit {
-                    if let Ok((first, new_input)) = parse_unsigned(new_input).map_err(|e| <de::value::Error as de::Error>::custom(e)) {
-                        let (hit, new_input) = parse_token(new_input, ",");
-                        if hit {
-                            if let Ok((second, new_input)) = parse_unsigned(new_input).map_err(|e| <de::value::Error as de::Error>::custom(e)) {
-                                let (hit, new_input) = parse_token(new_input, ")");
-                                if hit {
-                                    found = true;
-                                    input = new_input;
-                                    multipliers.push((first, second));
+        while let Ok(_c) = peek_char(input) {
+            let (hit, new_input) = parse_token(input, "do()");
+            if hit {
+                input = new_input;
+                enabled = true;
+            }
+            let (hit, new_input) = parse_token(input, "don't()");
+            if hit {
+                input = new_input;
+                enabled = false;
+            }
+            let (hit, new_input) = parse_token(input, "mul(");
+            if hit {
+                if let Ok((first, new_input)) = parse_unsigned(new_input).map_err(|e| <de::value::Error as de::Error>::custom(e)) {
+                    let (hit, new_input) = parse_token(new_input, ",");
+                    if hit {
+                        if let Ok((second, new_input)) = parse_unsigned(new_input).map_err(|e| <de::value::Error as de::Error>::custom(e)) {
+                            let (hit, new_input) = parse_token(new_input, ")");
+                            if hit {
+                                found = true;
+                                input = new_input;
+                                multipliers.push((first, second));
+                                if enabled {
+                                    selected.push((first, second));
                                 }
                             }
                         }
@@ -61,7 +75,7 @@ impl<'de> de::Visitor<'de> for Day3InputVisitor {
             found = false;
         }
 
-        Ok(Day3Input { multipliers })
+        Ok(Day3Input { multipliers, selected })
     }
 }
 
@@ -111,7 +125,8 @@ pub fn deserialize<'a, T: de::Deserialize<'a>>(input: &'a str) -> Result<T, MyEr
 pub fn calculate(input: &str) -> anyhow::Result<(i32, u64)> {
     let input: Day3Input = deserialize(input)?;
 
-    let sum = input.multipliers.iter().fold(0, |init, (f, s)| init + f * s);
+    let part1 = input.multipliers.iter().fold(0, |init, (f, s)| init + f * s);
+    let part2 = input.selected.iter().fold(0, |init, (f, s)| init + f * s);
 
-    Ok((sum as i32, 1))
+    Ok((part1 as i32, part2 as u64))
 }
