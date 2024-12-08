@@ -6,6 +6,7 @@ mod day1;
 mod day2;
 mod error;
 mod parsing;
+mod day3;
 
 #[derive(Parser)]
 #[clap(
@@ -23,6 +24,7 @@ fn main() {
     let res = match args.day {
         1 => day1::calculate(&read_to_string("input/day1").expect("read day1")),
         2 => day2::calculate(&read_to_string("input/day2").expect("read day2")),
+        3 => day3::calculate(&read_to_string("input/day3").expect("read day3")),
         _ => Err(anyhow!("illegal day")),
     };
 

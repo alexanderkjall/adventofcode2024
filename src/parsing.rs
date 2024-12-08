@@ -55,3 +55,12 @@ where
         }
     }
 }
+
+pub fn parse_token<'a>(input: &'a str, token: &str) -> (bool, &'a str)
+{
+    if input.starts_with(token) {
+        (true, &input[token.len()..])
+    } else {
+        (false, input)
+    }
+}
